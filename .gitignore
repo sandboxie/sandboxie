@@ -1,0 +1,14 @@
+.vs/
+
+*.dll
+*.drv
+*.exe
+*.ilk
+*.ipdb
+*.obj
+*.ncb
+*.pch
+*.pdb
+*.tlog
+*.tmp
+*.VC.db
