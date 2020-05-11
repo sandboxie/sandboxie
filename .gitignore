@@ -12,3 +12,14 @@
 *.tlog
 *.tmp
 *.VC.db
+
+Bin/
+SbieDebug
+SbieRelease
+MsgSbieRelease
+*.log
+**/*_h.h
+**/*_i.c
+**/*_p.c
+msgs/msgs.mc
+**/*-1033.txt
