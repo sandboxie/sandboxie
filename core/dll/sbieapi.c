@@ -1412,6 +1412,40 @@ _FX LONG SbieApi_MonitorGet(
 
 
 //---------------------------------------------------------------------------
+// SbieApi_MonitorGetEx
+//---------------------------------------------------------------------------
+
+
+_FX LONG SbieApi_MonitorGetEx(
+	ULONG *SeqNum,
+	USHORT *Type,
+	ULONG64 *Pid,
+	WCHAR *Name)                    // WCHAR [256]
+{
+	NTSTATUS status;
+	__declspec(align(8)) ULONG64 parms[API_NUM_ARGS];
+	API_MONITOR_GET_EX_ARGS *args = (API_MONITOR_GET_EX_ARGS *)parms;
+
+	args->func_code = API_MONITOR_GET_EX;
+	args->name_seq.val64 = (ULONG64)(ULONG_PTR)SeqNum;
+	args->name_type.val64 = (ULONG64)(ULONG_PTR)Type;
+	args->name_pid.val64 = (ULONG64)(ULONG_PTR)Pid;
+	args->name_len.val64 = 256 * sizeof(WCHAR);
+	args->name_ptr.val64 = (ULONG64)(ULONG_PTR)Name;
+	status = SbieApi_Ioctl(parms);
+
+	if (!NT_SUCCESS(status)) {
+		if (Type)
+			*Type = 0;
+		if (Name)
+			*Name = L'\0';
+	}
+
+	return status;
+}
+
+
+//---------------------------------------------------------------------------
 // SbieApi_GetUnmountHive
 //---------------------------------------------------------------------------
 

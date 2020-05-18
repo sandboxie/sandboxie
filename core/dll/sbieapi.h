@@ -196,6 +196,13 @@ LONG SbieApi_MonitorGet(
     USHORT *Type,
     WCHAR *Name);                   // WCHAR [256]
 
+SBIEAPI_EXPORT
+LONG SbieApi_MonitorGetEx(
+	ULONG *SeqNum,
+	USHORT *Type,
+	ULONG64 *Pid,
+	WCHAR *Name);                   // WCHAR [256]
+
 
 //---------------------------------------------------------------------------
 
