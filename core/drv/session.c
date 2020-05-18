@@ -593,9 +593,13 @@ _FX void Session_MonitorPut(USHORT type, const WCHAR *name, HANDLE pid)
 		SIZE_T entry_size = 2 + 8 + data_len;
 
 		CHAR* write_ptr = log_buffer_push_entry((LOG_BUFFER_SIZE_T)entry_size, session->monitor_log);
-		log_buffer_push_bytes((CHAR*)&type, 2, &write_ptr, session->monitor_log);
-		log_buffer_push_bytes((CHAR*)&pid64, 8, &write_ptr, session->monitor_log);
-		log_buffer_push_bytes((CHAR*)name, data_len, &write_ptr, session->monitor_log);
+		if (write_ptr) {
+			log_buffer_push_bytes((CHAR*)&type, 2, &write_ptr, session->monitor_log);
+			log_buffer_push_bytes((CHAR*)&pid64, 8, &write_ptr, session->monitor_log);
+			log_buffer_push_bytes((CHAR*)name, data_len, &write_ptr, session->monitor_log);
+		}
+		else // this can only happen when the entire buffer is to small to hold this entire entry
+			Log_Msg0(MSG_MONITOR_OVERFLOW);
     }
 
     Session_Unlock(irql);
@@ -944,7 +948,7 @@ _FX NTSTATUS Session_Api_MonitorGetEx(PROCESS *proc, ULONG64 *parms)
 			CHAR* read_ptr = NULL;
 			if (seq_num != NULL)
 				read_ptr = log_buffer_get_next(*seq_num, session->monitor_log);
-			else if (session->monitor_log->buffer_size > 0)
+			else if (session->monitor_log->buffer_size > 0) // for compatybility with older versions we return the oldest entry
 				read_ptr = session->monitor_log->buffer_start_ptr;
 
 			if (read_ptr != NULL) {
@@ -961,6 +965,7 @@ _FX NTSTATUS Session_Api_MonitorGetEx(PROCESS *proc, ULONG64 *parms)
 				log_buffer_get_bytes((CHAR*)user_name, entry_size - (2 + 8), &read_ptr, session->monitor_log);
 			}
 
+			// for compatybility with older versions we fall back to clearing the returned entry
 			if (seq_num != NULL)
 				log_buffer_pop_entry(session->monitor_log);
         }

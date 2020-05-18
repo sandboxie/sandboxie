@@ -62,11 +62,19 @@ SBIEAPI_EXPORT
 SBIEAPI_EXPORT LONG SbieApi_GetVersion(
     WCHAR *version_string);         // WCHAR [16]
 
-SBIEAPI_EXPORT
+/*SBIEAPI_EXPORT
 LONG SbieApi_GetWork(
     ULONG SessionId,
     void *Buffer,
-    ULONG *Length);
+    ULONG *Length);*/
+
+SBIEAPI_EXPORT 
+LONG SbieApi_GetMessage(
+	ULONG* MessageNum,
+	ULONG SessionId,
+	ULONG *MessageId,
+	wchar_t *Buffer,
+	ULONG Length);
 
 SBIEAPI_EXPORT LONG SbieApi_Log(
     ULONG msgid, const WCHAR *format, ...);

@@ -252,7 +252,7 @@ _FX LONG SbieApi_GetVersion(
 // SbieApi_GetWork
 //---------------------------------------------------------------------------
 
-
+/*
 _FX LONG SbieApi_GetWork(
     ULONG SessionId,
     void *Buffer,
@@ -272,6 +272,36 @@ _FX LONG SbieApi_GetWork(
     status = SbieApi_Ioctl(parms);
 
     return status;
+}
+*/
+
+//---------------------------------------------------------------------------
+// SbieApi_GetMessage
+//---------------------------------------------------------------------------
+
+
+_FX LONG SbieApi_GetMessage(
+	ULONG* MessageNum,
+	ULONG SessionId,
+	ULONG *MessageId,
+	wchar_t *Buffer,
+	ULONG Length)
+{
+	NTSTATUS status;
+	__declspec(align(8)) ULONG64 parms[API_NUM_ARGS];
+	API_GET_MESSAGE_ARGS *args = (API_GET_MESSAGE_ARGS *)parms;
+
+	memzero(parms, sizeof(parms));
+	args->func_code = API_GET_MESSAGE;
+	args->msg_num.val = MessageNum;
+	args->session_id.val = SessionId;
+	args->msgid.val = MessageId;
+	args->msgtext.val = Buffer; // WCHAR16
+	args->max_len.val = Length; // buffer size in bytes
+
+	status = SbieApi_Ioctl(parms);
+
+	return status;
 }
 
 
