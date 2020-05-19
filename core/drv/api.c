@@ -682,6 +682,8 @@ _FX NTSTATUS Api_GetMessage(PROCESS *proc, ULONG64 *parms)
 {
 	API_GET_MESSAGE_ARGS *args = (API_GET_MESSAGE_ARGS *)parms;
 	NTSTATUS status = STATUS_SUCCESS;
+	UNICODE_STRING64 *msgtext;
+	WCHAR *msgtext_buffer;
 	KIRQL irql;
 
 	if (proc)
@@ -691,6 +693,16 @@ _FX NTSTATUS Api_GetMessage(PROCESS *proc, ULONG64 *parms)
 	ProbeForWrite(args->msg_num.val, sizeof(ULONG), sizeof(ULONG));
 
 	ProbeForWrite(args->msgid.val, sizeof(ULONG), sizeof(ULONG));
+
+	msgtext = args->msgtext.val;
+	if (!msgtext)
+		return STATUS_INVALID_PARAMETER;
+	ProbeForRead(msgtext, sizeof(UNICODE_STRING64), sizeof(ULONG));
+	ProbeForWrite(msgtext, sizeof(UNICODE_STRING64), sizeof(ULONG));
+
+	msgtext_buffer = (WCHAR *)msgtext->Buffer;
+	if (!msgtext_buffer)
+		return STATUS_INVALID_PARAMETER;
 
 	irql = Api_EnterCriticalSection();
 
@@ -716,10 +728,11 @@ _FX NTSTATUS Api_GetMessage(PROCESS *proc, ULONG64 *parms)
 				log_buffer_get_bytes((CHAR*)args->msgid.val, 4, &read_ptr, Api_LogBuffer);
 				SIZE_T msg_length = entry_size - (4 + 4);
 
-				if (msg_length <= args->max_len.val)
+				if (msg_length <= msgtext->MaximumLength)
 				{
-					ProbeForWrite(args->msgtext.val, msg_length, 1);
-					memcpy(args->msgtext.val, read_ptr, msg_length);
+					msgtext->Length = (USHORT)msg_length;
+					ProbeForWrite(msgtext_buffer, msg_length, sizeof(WCHAR));
+					memcpy(msgtext_buffer, read_ptr, msg_length);
 				}
 				else
 				{

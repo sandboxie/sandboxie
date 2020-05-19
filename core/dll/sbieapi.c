@@ -288,16 +288,20 @@ _FX LONG SbieApi_GetMessage(
 	ULONG Length)
 {
 	NTSTATUS status;
+	__declspec(align(8)) UNICODE_STRING64 msgtext;
 	__declspec(align(8)) ULONG64 parms[API_NUM_ARGS];
 	API_GET_MESSAGE_ARGS *args = (API_GET_MESSAGE_ARGS *)parms;
+
+	msgtext.MaximumLength = (USHORT)Length;
+	msgtext.Buffer = (ULONG_PTR)Buffer;
+	msgtext.Length = 0;
 
 	memzero(parms, sizeof(parms));
 	args->func_code = API_GET_MESSAGE;
 	args->msg_num.val = MessageNum;
 	args->session_id.val = SessionId;
 	args->msgid.val = MessageId;
-	args->msgtext.val = Buffer; // WCHAR16
-	args->max_len.val = Length; // buffer size in bytes
+	args->msgtext.val = &msgtext;
 
 	status = SbieApi_Ioctl(parms);
 
