@@ -64,6 +64,15 @@ static BOOL Proc_CreateProcessInternalW_RS5(
     LPPROCESS_INFORMATION lpProcessInformation,
     HANDLE *hNewToken);
 
+static BOOL Proc_UpdateProcThreadAttribute(
+	_Inout_ LPPROC_THREAD_ATTRIBUTE_LIST lpAttributeList,
+	_In_ DWORD dwFlags,
+	_In_ DWORD_PTR Attribute,
+	_In_reads_bytes_opt_(cbSize) PVOID lpValue,
+	_In_ SIZE_T cbSize,
+	_Out_writes_bytes_opt_(cbSize) PVOID lpPreviousValue,
+	_In_opt_ PSIZE_T lpReturnSize);
+
 static BOOL Proc_AlternateCreateProcess(
     const WCHAR *lpApplicationName, WCHAR *lpCommandLine,
     void *lpCurrentDirectory, LPPROCESS_INFORMATION lpProcessInformation,
@@ -231,6 +240,15 @@ typedef BOOL(*P_GetTokenInformation)(
     _Out_ PDWORD ReturnLength);
 
 
+typedef BOOL(*P_UpdateProcThreadAttribute)(
+	_Inout_ LPPROC_THREAD_ATTRIBUTE_LIST lpAttributeList,
+	_In_ DWORD dwFlags,
+	_In_ DWORD_PTR Attribute,
+	_In_reads_bytes_opt_(cbSize) PVOID lpValue,
+	_In_ SIZE_T cbSize,
+	_Out_writes_bytes_opt_(cbSize) PVOID lpPreviousValue,
+	_In_opt_ PSIZE_T lpReturnSize);
+
 //---------------------------------------------------------------------------
 
 
@@ -256,6 +274,8 @@ static P_NtCreateProcessEx          __sys_NtCreateProcessEx         = NULL;
 
 static P_GetTokenInformation        __sys_GetTokenInformation       = NULL;
 
+
+static P_UpdateProcThreadAttribute	__sys_UpdateProcThreadAttribute = NULL;
 
 //---------------------------------------------------------------------------
 // Variables
@@ -322,6 +342,16 @@ _FX BOOLEAN Proc_Init(void)
         status = LdrGetProcedureAddress(
             Dll_Kernel32, &ansi, 0, (void **)&CreateProcessInternalW);
     }
+
+	// fix for chrome 86+
+	if (Dll_OsBuild >= 7600) {
+		void* UpdateProcThreadAttribute = NULL;
+		RtlInitString(&ansi, "UpdateProcThreadAttribute");
+		status = LdrGetProcedureAddress(
+			Dll_KernelBase, &ansi, 0, (void **)&UpdateProcThreadAttribute);
+		if (NT_SUCCESS(status))
+			SBIEDLL_HOOK(Proc_, UpdateProcThreadAttribute);
+	}
 
     if(Dll_OsBuild < 17677) {
     
@@ -877,6 +907,26 @@ finish:
 
     SetLastError(err);
     return ok;
+}
+
+
+_FX BOOL Proc_UpdateProcThreadAttribute(
+	_Inout_ LPPROC_THREAD_ATTRIBUTE_LIST lpAttributeList,
+	_In_ DWORD dwFlags,
+	_In_ DWORD_PTR Attribute,
+	_In_reads_bytes_opt_(cbSize) PVOID lpValue,
+	_In_ SIZE_T cbSize,
+	_Out_writes_bytes_opt_(cbSize) PVOID lpPreviousValue,
+	_In_opt_ PSIZE_T lpReturnSize)
+{
+	// fix for chreom 86+
+	// when the PROC_THREAD_ATTRIBUTE_JOB_LIST is set the call CreateProcessAsUserW -> CreateProcessInternalW -> NtCreateProcess 
+	// fals with an access denided error, so we need to block this attribute form being set
+	// if(Dll_ImageType == DLL_IMAGE_GOOGLE_CHROME)
+	if (Attribute == 0x0002000d) //PROC_THREAD_ATTRIBUTE_JOB_LIST
+		return TRUE;
+
+	return __sys_UpdateProcThreadAttribute(lpAttributeList, dwFlags, Attribute, lpValue, cbSize, lpPreviousValue, lpReturnSize);
 }
 
 void *Proc_GetImageFullPath(const WCHAR *lpApplicationName, const WCHAR *lpCommandLine)
